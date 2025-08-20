@@ -19,7 +19,8 @@ const ChatInput = () => {
     temperature,
     systemPrompt,
     currentSessionId,
-    createNewSession
+    createNewSession,
+    saveCurrentSession
   } = usePlaygroundStore()
 
   const { sendStreamingMessage } = useLLM7Chat()
@@ -77,6 +78,11 @@ const ChatInput = () => {
           })
         }
       )
+
+      // Auto-save session after successful response
+      setTimeout(() => {
+        saveCurrentSession()
+      }, 500)
     } catch (error) {
       toast.error(
         `Error sending message: ${

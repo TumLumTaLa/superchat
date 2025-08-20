@@ -11,7 +11,8 @@ const ChatHistory = () => {
     chatSessions,
     currentSessionId,
     loadSession,
-    deleteSession
+    deleteSession,
+    generateSessionTitle
   } = usePlaygroundStore()
   
   const [showHistory, setShowHistory] = useState(false)
@@ -23,6 +24,11 @@ const ChatHistory = () => {
   const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     deleteSession(sessionId)
+  }
+
+  const handleRegenerateTitle = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    generateSessionTitle(sessionId)
   }
 
   const formatDate = (timestamp: number) => {
@@ -96,15 +102,29 @@ const ChatHistory = () => {
                       </span>
                     </div>
                   </div>
-                  
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
-                    onClick={(e) => handleDeleteSession(session.id, e)}
-                  >
-                    <Icon type="trash" size="xs" />
-                  </Button>
+
+                  <div className="flex items-center space-x-1">
+                    {session.title === 'New Chat' && session.messages.length >= 2 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                        onClick={(e) => handleRegenerateTitle(session.id, e)}
+                        title="Generate AI title"
+                      >
+                        <Icon type="refresh" size="xs" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0"
+                      onClick={(e) => handleDeleteSession(session.id, e)}
+                      title="Delete session"
+                    >
+                      <Icon type="trash" size="xs" />
+                    </Button>
+                  </div>
                 </motion.div>
               ))
             )}

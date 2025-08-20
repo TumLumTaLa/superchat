@@ -3,6 +3,12 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 
 
 import { type LLM7Message } from '@/lib/llm7Service'
+import { generateTitleDebounced, getFallbackTitle } from '@/lib/titleGenerator'
+
+// Constants for optimization
+const MAX_CHAT_SESSIONS = 50 // Maximum number of sessions to keep
+const AUTO_SAVE_DELAY = 1000 // Debounce delay for auto-save (ms)
+const TITLE_GENERATION_DELAY = 3000 // Delay before generating AI title (ms)
 
 export interface ChatSession {
   id: string
@@ -57,15 +63,15 @@ interface PlaygroundStore {
   saveCurrentSession: () => void
   loadSession: (sessionId: string) => void
   deleteSession: (sessionId: string) => void
+  generateSessionTitle: (sessionId: string) => Promise<void>
+  cleanupOldSessions: () => void
 }
 
+// Debounce timers
+let autoSaveTimeout: NodeJS.Timeout | null = null
+
 const generateSessionTitle = (messages: LLM7Message[]): string => {
-  const firstUserMessage = messages.find(msg => msg.role === 'user')
-  if (firstUserMessage) {
-    const content = firstUserMessage.content.trim()
-    return content.length > 50 ? content.substring(0, 50) + '...' : content
-  }
-  return 'New Chat'
+  return getFallbackTitle(messages)
 }
 
 export const usePlaygroundStore = create<PlaygroundStore>()(
@@ -117,24 +123,43 @@ export const usePlaygroundStore = create<PlaygroundStore>()(
           messages: []
         }))
 
+        // Cleanup old sessions if needed
+        setTimeout(() => get().cleanupOldSessions(), 100)
+
         return sessionId
       },
       saveCurrentSession: () => {
-        const state = get()
-        if (!state.currentSessionId || state.messages.length === 0) return
-
-        const sessionIndex = state.chatSessions.findIndex(s => s.id === state.currentSessionId)
-        if (sessionIndex >= 0) {
-          const updatedSessions = [...state.chatSessions]
-          updatedSessions[sessionIndex] = {
-            ...updatedSessions[sessionIndex],
-            messages: [...state.messages],
-            title: generateSessionTitle(state.messages),
-            updatedAt: Date.now(),
-            model: state.selectedModel
-          }
-          set({ chatSessions: updatedSessions })
+        // Clear existing timeout
+        if (autoSaveTimeout) {
+          clearTimeout(autoSaveTimeout)
         }
+
+        // Debounce auto-save
+        autoSaveTimeout = setTimeout(() => {
+          const state = get()
+          if (!state.currentSessionId || state.messages.length === 0) return
+
+          const sessionIndex = state.chatSessions.findIndex(s => s.id === state.currentSessionId)
+          if (sessionIndex >= 0) {
+            const updatedSessions = [...state.chatSessions]
+            const currentSession = updatedSessions[sessionIndex]
+
+            updatedSessions[sessionIndex] = {
+              ...currentSession,
+              messages: [...state.messages],
+              title: currentSession.title === 'New Chat' ? generateSessionTitle(state.messages) : currentSession.title,
+              updatedAt: Date.now(),
+              model: state.selectedModel
+            }
+
+            set({ chatSessions: updatedSessions })
+
+            // Generate AI title if still using default title and has enough messages
+            if (currentSession.title === 'New Chat' && state.messages.length >= 2 && state.llm7ApiKey) {
+              get().generateSessionTitle(state.currentSessionId)
+            }
+          }
+        }, AUTO_SAVE_DELAY)
       },
       loadSession: (sessionId) => {
         const state = get()
@@ -157,6 +182,45 @@ export const usePlaygroundStore = create<PlaygroundStore>()(
           currentSessionId: newCurrentSessionId,
           messages: newCurrentSessionId ? state.messages : []
         })
+      },
+      generateSessionTitle: async (sessionId: string) => {
+        const state = get()
+        const session = state.chatSessions.find(s => s.id === sessionId)
+
+        if (!session || !state.llm7ApiKey || session.messages.length < 2) return
+
+        try {
+          generateTitleDebounced(
+            session.messages,
+            state.llm7ApiKey,
+            (newTitle: string) => {
+              const currentState = get()
+              const sessionIndex = currentState.chatSessions.findIndex(s => s.id === sessionId)
+
+              if (sessionIndex >= 0) {
+                const updatedSessions = [...currentState.chatSessions]
+                updatedSessions[sessionIndex] = {
+                  ...updatedSessions[sessionIndex],
+                  title: newTitle
+                }
+                set({ chatSessions: updatedSessions })
+              }
+            },
+            TITLE_GENERATION_DELAY
+          )
+        } catch (error) {
+          console.warn('Failed to generate session title:', error)
+        }
+      },
+      cleanupOldSessions: () => {
+        const state = get()
+        if (state.chatSessions.length > MAX_CHAT_SESSIONS) {
+          // Keep the most recent sessions
+          const sortedSessions = [...state.chatSessions].sort((a, b) => b.updatedAt - a.updatedAt)
+          const sessionsToKeep = sortedSessions.slice(0, MAX_CHAT_SESSIONS)
+
+          set({ chatSessions: sessionsToKeep })
+        }
       }
     }),
     {
