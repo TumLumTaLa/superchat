@@ -12,7 +12,7 @@ import {
   Reference
 } from '@/types/playground'
 import React, { type FC } from 'react'
-import ChatBlankState from './ChatBlankState'
+
 import Icon from '@/components/ui/icon'
 
 type ChatMessage = PlaygroundChatMessage | LLM7Message
@@ -64,7 +64,7 @@ const References: FC<ReferenceProps> = ({ references }) => (
 const AgentMessageWrapper = ({ message }: MessageWrapperProps) => {
   return (
     <div className="flex flex-col gap-y-9">
-      {message.extra_data?.reasoning_steps &&
+      {'extra_data' in message && message.extra_data?.reasoning_steps &&
         message.extra_data.reasoning_steps.length > 0 && (
           <div className="flex items-start gap-4">
             <Tooltip
@@ -80,7 +80,7 @@ const AgentMessageWrapper = ({ message }: MessageWrapperProps) => {
             </div>
           </div>
         )}
-      {message.extra_data?.references &&
+      {'extra_data' in message && message.extra_data?.references &&
         message.extra_data.references.length > 0 && (
           <div className="flex items-start gap-4">
             <Tooltip
@@ -95,7 +95,7 @@ const AgentMessageWrapper = ({ message }: MessageWrapperProps) => {
             </div>
           </div>
         )}
-      {message.tool_calls && message.tool_calls.length > 0 && (
+      {'tool_calls' in message && message.tool_calls && message.tool_calls.length > 0 && (
         <div className="flex items-start gap-3">
           <Tooltip
             delayDuration={0}
@@ -172,7 +172,6 @@ const Messages = ({ messages }: MessageListProps) => {
               role: 'agent',
               content: message.content,
               created_at: Date.now(),
-              message_id: `llm7-${index}`,
               streamingError: false
             }
             return (
@@ -186,8 +185,7 @@ const Messages = ({ messages }: MessageListProps) => {
             const playgroundMessage: PlaygroundChatMessage = {
               role: 'user',
               content: message.content,
-              created_at: Date.now(),
-              message_id: `llm7-user-${index}`
+              created_at: Date.now()
             }
             return <UserMessage key={key} message={playgroundMessage} />
           }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { TextArea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Loader2, Send, Settings } from 'lucide-react'
-import { useLLM7Chat, useLLM7Models, type LLM7Message } from '@/hooks/useLLM7Chat'
+import { useLLM7Chat, useLLM7Models } from '@/hooks/useLLM7Chat'
+import { type LLM7Message } from '@/lib/llm7Service'
 import { toast } from 'sonner'
 
 export function LLM7Chat() {
@@ -19,8 +20,21 @@ export function LLM7Chat() {
   const [showSettings, setShowSettings] = useState(false)
   const [temperature, setTemperature] = useState(0.7)
   
-  const { state, sendStreamingMessage, clearError, reset } = useLLM7Chat()
-  const { models, fetchModels } = useLLM7Models()
+  const { state, sendStreamingMessage, reset } = useLLM7Chat()
+  const { fetchModels } = useLLM7Models()
+  const [models, setModels] = useState<string[]>([])
+
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const fetchedModels = await fetchModels()
+        setModels(fetchedModels)
+      } catch (error) {
+        console.error('Failed to load models:', error)
+      }
+    }
+    loadModels()
+  }, [fetchModels])
 
   const handleSendMessage = async () => {
     if (!message.trim()) return
@@ -67,7 +81,7 @@ export function LLM7Chat() {
       if (state.error) {
         toast.error(state.error)
       }
-    } catch (error) {
+    } catch {
       toast.error('Failed to send message')
       // Remove the placeholder assistant message on error
       setConversation(newConversation)

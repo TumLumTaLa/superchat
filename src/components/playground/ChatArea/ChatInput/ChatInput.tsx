@@ -14,7 +14,6 @@ const ChatInput = () => {
     messages,
     setMessages,
     isStreaming,
-    setIsStreaming,
     selectedModel,
     llm7ApiKey,
     temperature,

@@ -187,7 +187,7 @@ export class LLM7Service {
 
       // Parse the response format from llm7.io API
       if (Array.isArray(data)) {
-        const models = data.map((model: any) => model.id).filter(Boolean)
+        const models = data.map((model: { id: string }) => model.id).filter(Boolean)
         console.log(`Loaded ${models.length} models from LLM7.io API`)
         return models
       }

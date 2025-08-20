@@ -5,10 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { usePlaygroundStore } from '@/store'
 import { useLLM7Models } from '@/hooks/useLLM7Chat'
-import { llm7Service } from '@/lib/llm7Service'
 import Icon from '@/components/ui/icon'
 import { getProviderIcon } from '@/lib/modelProvider'
-import { type LLM7Message } from '@/lib/llm7Service'
 
 const ChatHeader = () => {
   const {

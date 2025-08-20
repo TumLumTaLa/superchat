@@ -16,7 +16,7 @@ interface MessageProps {
 const AgentMessage = ({ message }: MessageProps) => {
   const { streamingErrorMessage } = usePlaygroundStore()
   let messageContent
-  if (message.streamingError) {
+  if ('streamingError' in message && message.streamingError) {
     messageContent = (
       <p className="text-destructive">
         Oops! Something went wrong while streaming.{' '}
@@ -31,18 +31,18 @@ const AgentMessage = ({ message }: MessageProps) => {
     messageContent = (
       <div className="flex w-full flex-col gap-4">
         <MarkdownRenderer>{message.content}</MarkdownRenderer>
-        {message.videos && message.videos.length > 0 && (
+        {'videos' in message && message.videos && message.videos.length > 0 && (
           <Videos videos={message.videos} />
         )}
-        {message.images && message.images.length > 0 && (
+        {'images' in message && message.images && message.images.length > 0 && (
           <Images images={message.images} />
         )}
-        {message.audio && message.audio.length > 0 && (
+        {'audio' in message && message.audio && message.audio.length > 0 && (
           <Audios audio={message.audio} />
         )}
       </div>
     )
-  } else if (message.response_audio) {
+  } else if ('response_audio' in message && message.response_audio) {
     if (!message.response_audio.transcript) {
       messageContent = (
         <div className="mt-2 flex items-start">

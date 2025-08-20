@@ -1,20 +1,24 @@
 'use client'
 
-import * as React from 'react'
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem
-} from '@/components/ui/select'
-import { usePlaygroundStore } from '@/store'
-import { useQueryState } from 'nuqs'
-import Icon from '@/components/ui/icon'
-import { useEffect } from 'react'
-import useChatActions from '@/hooks/useChatActions'
+// Temporarily disabled component
+// import * as React from 'react'
+// import {
+//   Select,
+//   SelectTrigger,
+//   SelectValue,
+//   SelectContent,
+//   SelectItem
+// } from '@/components/ui/select'
+// import { usePlaygroundStore } from '@/store'
+// import { useQueryState } from 'nuqs'
+// import Icon from '@/components/ui/icon'
+// import { useEffect } from 'react'
+// import useChatActions from '@/hooks/useChatActions'
 
 export function EntitySelector() {
+  // Temporarily disabled - properties not available in current store
+  return null
+  /*
   const {
     mode,
     agents,
@@ -117,4 +121,5 @@ export function EntitySelector() {
       </SelectContent>
     </Select>
   )
+  */
 }

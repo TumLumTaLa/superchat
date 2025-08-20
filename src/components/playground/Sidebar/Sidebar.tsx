@@ -135,7 +135,7 @@ const LLM7Settings = () => {
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const { clearChat, focusChatInput } = useChatActions()
-  const { messages, hydrated } = usePlaygroundStore()
+  const { hydrated } = usePlaygroundStore()
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {

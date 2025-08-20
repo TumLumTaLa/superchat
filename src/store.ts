@@ -1,10 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
-import {
-  type PlaygroundChatMessage,
-  type SessionEntry
-} from '@/types/playground'
+
 import { type LLM7Message } from '@/lib/llm7Service'
 
 export interface ChatSession {
@@ -16,14 +13,7 @@ export interface ChatSession {
   model: string
 }
 
-interface Agent {
-  value: string
-  label: string
-  model: {
-    provider: string
-  }
-  storage?: boolean
-}
+
 
 export interface Team {
   value: string
@@ -111,7 +101,7 @@ export const usePlaygroundStore = create<PlaygroundStore>()(
       currentSessionId: null,
       setCurrentSessionId: (sessionId) => set(() => ({ currentSessionId: sessionId })),
       createNewSession: () => {
-        const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        const sessionId = `session-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`
         const newSession: ChatSession = {
           id: sessionId,
           title: 'New Chat',
