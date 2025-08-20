@@ -1,4 +1,5 @@
 import type { PlaygroundChatMessage } from '@/types/playground'
+import type { LLM7Message } from '@/lib/llm7Service'
 
 import { AgentMessage, UserMessage } from './MessageItem'
 import Tooltip from '@/components/ui/tooltip'
@@ -14,12 +15,14 @@ import React, { type FC } from 'react'
 import ChatBlankState from './ChatBlankState'
 import Icon from '@/components/ui/icon'
 
+type ChatMessage = PlaygroundChatMessage | LLM7Message
+
 interface MessageListProps {
-  messages: PlaygroundChatMessage[]
+  messages: ChatMessage[]
 }
 
 interface MessageWrapperProps {
-  message: PlaygroundChatMessage
+  message: ChatMessage
   isLastMessage: boolean
 }
 
@@ -152,25 +155,59 @@ const ToolComponent = memo(({ tools }: ToolCallProps) => (
 ToolComponent.displayName = 'ToolComponent'
 const Messages = ({ messages }: MessageListProps) => {
   if (messages.length === 0) {
-    return <ChatBlankState />
+    return <div className="flex-1" />
   }
 
   return (
     <>
       {messages.map((message, index) => {
-        const key = `${message.role}-${message.created_at}-${index}`
+        const key = `${message.role}-${index}`
         const isLastMessage = index === messages.length - 1
 
-        if (message.role === 'agent') {
-          return (
-            <AgentMessageWrapper
-              key={key}
-              message={message}
-              isLastMessage={isLastMessage}
-            />
-          )
+        // Handle LLM7Message format
+        if ('role' in message && (message.role === 'assistant' || message.role === 'user')) {
+          if (message.role === 'assistant') {
+            // Convert LLM7Message to PlaygroundChatMessage format for AgentMessage
+            const playgroundMessage: PlaygroundChatMessage = {
+              role: 'agent',
+              content: message.content,
+              created_at: Date.now(),
+              message_id: `llm7-${index}`,
+              streamingError: false
+            }
+            return (
+              <AgentMessage
+                key={key}
+                message={playgroundMessage}
+              />
+            )
+          } else {
+            // Convert LLM7Message to PlaygroundChatMessage format for UserMessage
+            const playgroundMessage: PlaygroundChatMessage = {
+              role: 'user',
+              content: message.content,
+              created_at: Date.now(),
+              message_id: `llm7-user-${index}`
+            }
+            return <UserMessage key={key} message={playgroundMessage} />
+          }
         }
-        return <UserMessage key={key} message={message} />
+
+        // Handle original PlaygroundChatMessage format
+        if ('created_at' in message) {
+          if (message.role === 'agent') {
+            return (
+              <AgentMessageWrapper
+                key={key}
+                message={message as PlaygroundChatMessage}
+                isLastMessage={isLastMessage}
+              />
+            )
+          }
+          return <UserMessage key={key} message={message as PlaygroundChatMessage} />
+        }
+
+        return null
       })}
     </>
   )

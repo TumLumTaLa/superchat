@@ -5,6 +5,16 @@ import {
   type PlaygroundChatMessage,
   type SessionEntry
 } from '@/types/playground'
+import { type LLM7Message } from '@/lib/llm7Service'
+
+export interface ChatSession {
+  id: string
+  title: string
+  messages: LLM7Message[]
+  createdAt: number
+  updatedAt: number
+  model: string
+}
 
 interface Agent {
   value: string
@@ -29,110 +39,146 @@ interface PlaygroundStore {
   setHydrated: () => void
   streamingErrorMessage: string
   setStreamingErrorMessage: (streamingErrorMessage: string) => void
-  endpoints: {
-    endpoint: string
-    id_playground_endpoint: string
-  }[]
-  setEndpoints: (
-    endpoints: {
-      endpoint: string
-      id_playground_endpoint: string
-    }[]
-  ) => void
   isStreaming: boolean
   setIsStreaming: (isStreaming: boolean) => void
-  isEndpointActive: boolean
-  setIsEndpointActive: (isActive: boolean) => void
-  isEndpointLoading: boolean
-  setIsEndpointLoading: (isLoading: boolean) => void
-  messages: PlaygroundChatMessage[]
+  messages: LLM7Message[]
   setMessages: (
     messages:
-      | PlaygroundChatMessage[]
-      | ((prevMessages: PlaygroundChatMessage[]) => PlaygroundChatMessage[])
+      | LLM7Message[]
+      | ((prevMessages: LLM7Message[]) => LLM7Message[])
   ) => void
-  hasStorage: boolean
-  setHasStorage: (hasStorage: boolean) => void
   chatInputRef: React.RefObject<HTMLTextAreaElement | null>
-  selectedEndpoint: string
-  setSelectedEndpoint: (selectedEndpoint: string) => void
-  agents: Agent[]
-  setAgents: (agents: Agent[]) => void
-  teams: Team[]
-  setTeams: (teams: Team[]) => void
   selectedModel: string
   setSelectedModel: (model: string) => void
-  selectedTeamId: string | null
-  setSelectedTeamId: (teamId: string | null) => void
-  mode: 'agent' | 'team'
-  setMode: (mode: 'agent' | 'team') => void
-  sessionsData: SessionEntry[] | null
-  setSessionsData: (
-    sessionsData:
-      | SessionEntry[]
-      | ((prevSessions: SessionEntry[] | null) => SessionEntry[] | null)
-  ) => void
-  isSessionsLoading: boolean
-  setIsSessionsLoading: (isSessionsLoading: boolean) => void
+  llm7ApiKey: string
+  setLLM7ApiKey: (apiKey: string) => void
+  temperature: number
+  setTemperature: (temperature: number) => void
+  availableModels: string[]
+  setAvailableModels: (models: string[]) => void
+  systemPrompt: string
+  setSystemPrompt: (prompt: string) => void
+  // Chat History
+  chatSessions: ChatSession[]
+  setChatSessions: (sessions: ChatSession[]) => void
+  currentSessionId: string | null
+  setCurrentSessionId: (sessionId: string | null) => void
+  createNewSession: () => string
+  saveCurrentSession: () => void
+  loadSession: (sessionId: string) => void
+  deleteSession: (sessionId: string) => void
+}
+
+const generateSessionTitle = (messages: LLM7Message[]): string => {
+  const firstUserMessage = messages.find(msg => msg.role === 'user')
+  if (firstUserMessage) {
+    const content = firstUserMessage.content.trim()
+    return content.length > 50 ? content.substring(0, 50) + '...' : content
+  }
+  return 'New Chat'
 }
 
 export const usePlaygroundStore = create<PlaygroundStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       hydrated: false,
       setHydrated: () => set({ hydrated: true }),
       streamingErrorMessage: '',
       setStreamingErrorMessage: (streamingErrorMessage) =>
         set(() => ({ streamingErrorMessage })),
-      endpoints: [],
-      setEndpoints: (endpoints) => set(() => ({ endpoints })),
       isStreaming: false,
       setIsStreaming: (isStreaming) => set(() => ({ isStreaming })),
-      isEndpointActive: false,
-      setIsEndpointActive: (isActive) =>
-        set(() => ({ isEndpointActive: isActive })),
-      isEndpointLoading: true,
-      setIsEndpointLoading: (isLoading) =>
-        set(() => ({ isEndpointLoading: isLoading })),
       messages: [],
       setMessages: (messages) =>
         set((state) => ({
           messages:
             typeof messages === 'function' ? messages(state.messages) : messages
         })),
-      hasStorage: false,
-      setHasStorage: (hasStorage) => set(() => ({ hasStorage })),
       chatInputRef: { current: null },
-      selectedEndpoint: 'http://localhost:7777',
-      setSelectedEndpoint: (selectedEndpoint) =>
-        set(() => ({ selectedEndpoint })),
-      agents: [],
-      setAgents: (agents) => set({ agents }),
-      teams: [],
-      setTeams: (teams) => set({ teams }),
-      selectedModel: '',
+      selectedModel: 'deepseek-r1-0528',
       setSelectedModel: (selectedModel) => set(() => ({ selectedModel })),
-      selectedTeamId: null,
-      setSelectedTeamId: (teamId) => set(() => ({ selectedTeamId: teamId })),
-      mode: 'team',
-      setMode: (mode) => set(() => ({ mode })),
-      sessionsData: null,
-      setSessionsData: (sessionsData) =>
+      llm7ApiKey: '',
+      setLLM7ApiKey: (apiKey) => set(() => ({ llm7ApiKey: apiKey })),
+      temperature: 0.7,
+      setTemperature: (temperature) => set(() => ({ temperature })),
+      availableModels: [], // Will be loaded from API
+      setAvailableModels: (models) => set(() => ({ availableModels: models })),
+      systemPrompt: '',
+      setSystemPrompt: (prompt) => set(() => ({ systemPrompt: prompt })),
+      // Chat History
+      chatSessions: [],
+      setChatSessions: (sessions) => set(() => ({ chatSessions: sessions })),
+      currentSessionId: null,
+      setCurrentSessionId: (sessionId) => set(() => ({ currentSessionId: sessionId })),
+      createNewSession: () => {
+        const sessionId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        const newSession: ChatSession = {
+          id: sessionId,
+          title: 'New Chat',
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          model: get().selectedModel
+        }
+
         set((state) => ({
-          sessionsData:
-            typeof sessionsData === 'function'
-              ? sessionsData(state.sessionsData)
-              : sessionsData
-        })),
-      isSessionsLoading: false,
-      setIsSessionsLoading: (isSessionsLoading) =>
-        set(() => ({ isSessionsLoading }))
+          chatSessions: [newSession, ...state.chatSessions],
+          currentSessionId: sessionId,
+          messages: []
+        }))
+
+        return sessionId
+      },
+      saveCurrentSession: () => {
+        const state = get()
+        if (!state.currentSessionId || state.messages.length === 0) return
+
+        const sessionIndex = state.chatSessions.findIndex(s => s.id === state.currentSessionId)
+        if (sessionIndex >= 0) {
+          const updatedSessions = [...state.chatSessions]
+          updatedSessions[sessionIndex] = {
+            ...updatedSessions[sessionIndex],
+            messages: [...state.messages],
+            title: generateSessionTitle(state.messages),
+            updatedAt: Date.now(),
+            model: state.selectedModel
+          }
+          set({ chatSessions: updatedSessions })
+        }
+      },
+      loadSession: (sessionId) => {
+        const state = get()
+        const session = state.chatSessions.find(s => s.id === sessionId)
+        if (session) {
+          set({
+            currentSessionId: sessionId,
+            messages: [...session.messages],
+            selectedModel: session.model
+          })
+        }
+      },
+      deleteSession: (sessionId) => {
+        const state = get()
+        const updatedSessions = state.chatSessions.filter(s => s.id !== sessionId)
+        const newCurrentSessionId = state.currentSessionId === sessionId ? null : state.currentSessionId
+
+        set({
+          chatSessions: updatedSessions,
+          currentSessionId: newCurrentSessionId,
+          messages: newCurrentSessionId ? state.messages : []
+        })
+      }
     }),
     {
-      name: 'endpoint-storage',
+      name: 'llm7-chat-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        selectedEndpoint: state.selectedEndpoint
+        selectedModel: state.selectedModel,
+        llm7ApiKey: state.llm7ApiKey,
+        temperature: state.temperature,
+        systemPrompt: state.systemPrompt,
+        chatSessions: state.chatSessions,
+        currentSessionId: state.currentSessionId
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHydrated?.()

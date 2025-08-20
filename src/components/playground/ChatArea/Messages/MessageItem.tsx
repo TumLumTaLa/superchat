@@ -2,6 +2,7 @@ import Icon from '@/components/ui/icon'
 import MarkdownRenderer from '@/components/ui/typography/MarkdownRenderer'
 import { usePlaygroundStore } from '@/store'
 import type { PlaygroundChatMessage } from '@/types/playground'
+import type { LLM7Message } from '@/lib/llm7Service'
 import Videos from './Multimedia/Videos'
 import Images from './Multimedia/Images'
 import Audios from './Multimedia/Audios'
@@ -9,7 +10,7 @@ import { memo } from 'react'
 import AgentThinkingLoader from './AgentThinkingLoader'
 
 interface MessageProps {
-  message: PlaygroundChatMessage
+  message: PlaygroundChatMessage | LLM7Message
 }
 
 const AgentMessage = ({ message }: MessageProps) => {
@@ -80,14 +81,12 @@ const AgentMessage = ({ message }: MessageProps) => {
 
 const UserMessage = memo(({ message }: MessageProps) => {
   return (
-    <div className="flex items-start pt-4 text-start max-md:break-words">
-      <div className="flex flex-row gap-x-3">
-        <p className="flex items-center gap-x-2 text-sm font-medium text-muted">
-          <Icon type="user" size="sm" />
-        </p>
-        <div className="text-md rounded-lg py-1 font-geist text-secondary">
-          {message.content}
-        </div>
+    <div className="flex items-start gap-4 font-geist justify-end">
+      <div className="text-md rounded-lg py-1 font-geist text-secondary max-w-[80%] text-right">
+        {message.content}
+      </div>
+      <div className="flex-shrink-0">
+        <Icon type="user" size="sm" />
       </div>
     </div>
   )

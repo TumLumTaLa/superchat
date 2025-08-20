@@ -37,5 +37,9 @@ export const APIRoutes = {
     PlaygroundApiUrl: string,
     teamId: string,
     sessionId: string
-  ) => `${PlaygroundApiUrl}/v1/playground/teams/${teamId}/sessions/${sessionId}`
+  ) => `${PlaygroundApiUrl}/v1/playground/teams/${teamId}/sessions/${sessionId}`,
+
+  // LLM7.io API Routes
+  LLM7ChatCompletions: () => 'https://api.llm7.io/v1/chat/completions',
+  LLM7Models: () => 'https://api.llm7.io/v1/models'
 }
